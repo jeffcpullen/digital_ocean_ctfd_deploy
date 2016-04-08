@@ -66,13 +66,37 @@
       image: mysql:latest
       state: started
       env:
-        MYSQL_ROOT_PASSWORD: "{{ MYSQL-PASSWORD }}"
+        MYSQL_ROOT_PASSWORD: "{{ MYSQL_PASSWORD }}"
 
 #  - name: Start gunicorn
 #    docker:
 #      name: ctfgunicorn
 #      image: docker.io/danriti/nginx-gunicorn-flask:latest
 #      state: started
+
+  - name: Copy gunicorn dockerfile
+    copy:
+      src: gunicorn/Dockerfile 
+      dest: /opt/CTFd/Dockerfile
+  
+  - name: Copy gunicorn configuration
+    copy:
+      src: gunicorn/ctfd.conf
+      dest: /opt/CTFd/ctfd.conf
+
+  - name: Build the gunicorn image
+    docker_image: 
+      path: "/opt/CTFd/"
+      name: "gunicornimage"
+      state: present 
+
+  - name: Start the gunicorn
+    docker:
+      name: ctfgunicorn
+      image: gunicornimage
+      state: started
+      links: ctfmysql
+      publish_all_ports: yes
 
   handlers:
     - name: restart iptables
