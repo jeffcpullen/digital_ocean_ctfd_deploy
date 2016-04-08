@@ -1,0 +1,81 @@
+- hosts: ctfd
+  remote_user: root
+  tasks:
+
+#  - name: Update to the latest packages (work around for yum bug)
+#    shell: 'yum -y update'
+
+#  - name: Install docker (work around for yum bug)
+#    shell: 'yum -y install docker docker-python git'
+
+  - name: Pull in the swap variables
+    include_vars: digital_ocean.env
+
+  - name: Update to the latest packages
+    yum:
+      name: '*'
+      state: latest
+      update_cache: yes
+  
+  - name: Add needed packages
+    yum:
+      pkg: "{{item}}"
+      state: latest
+    with_items:
+      - "docker"
+      - "git"
+      - "docker-python"
+
+  - name: Enable and start docker
+    service:
+      name: docker
+      enabled: yes
+      state: started
+
+  - name: Deploy IPTables rules
+    template:
+      src: iptables.j2
+      dest: /etc/sysconfig/iptables
+      owner: root
+      group: root
+      mode: 0644
+
+  - name: Restore IPTables
+    shell: '/usr/sbin/iptables-restore < /etc/sysconfig/iptables'
+
+
+#  - name: Clone Lets Encrypt repository
+#    git: 
+#      repo: https://github.com/letsencrypt/letsencrypt
+#      dest: /opt/letsencrypt
+
+  - name: Clone CTFd repository
+    git:
+      repo: https://github.com/jeffcpullen/CTFd.git
+      dest: /opt/CTFd
+
+#  - name: Build CTFd docker image
+#    docker_image:
+#      path: /opt/CTFd
+#      name: ctfd
+#      state: present
+  
+  - name: Start mysql container
+    docker:
+      name: ctfmysql
+      image: mysql:latest
+      state: started
+      env:
+        MYSQL_ROOT_PASSWORD: "{{ MYSQL-PASSWORD }}"
+
+#  - name: Start gunicorn
+#    docker:
+#      name: ctfgunicorn
+#      image: docker.io/danriti/nginx-gunicorn-flask:latest
+#      state: started
+
+  handlers:
+    - name: restart iptables
+      service:
+        name: iptables
+        state: restarted

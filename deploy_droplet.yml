@@ -1,0 +1,45 @@
+---
+- hosts: localhost
+  vars:
+    DROPLET_NAME: ctfd
+    BASH_ALIAS_FILE: ~/.bashrc
+    HOST_FILE: ./hosts
+
+  tasks:
+  - name: Pull in the swap variables
+    include_vars: digital_ocean.env
+
+  - name: Create Droplet
+    digital_ocean:
+      state: present
+      command: droplet
+      name: "{{ DROPLET_NAME }}"
+      api_token: "{{DO_API_KEY}}"
+      size_id: 512mb
+      region_id: nyc2
+      image_id: 16040476
+      wait_timeout: 500
+      ssh_key_ids: 1593277,1586989
+      unique_name: yes
+    register: my_droplet
+  
+  - name: Add an alias for quick access to this droplet
+    lineinfile:
+      state: present
+      regexp: "^alias {{ DROPLET_NAME }}=*"
+      dest: "{{ BASH_ALIAS_FILE }}"
+      line: "alias {{ DROPLET_NAME }}='ssh -i ~/.ssh/id_rsa.pub -l root {{ my_droplet.droplet.ip_address }}'"
+      backup: no
+
+  - name: Update hosts file
+    lineinfile:
+      state: present
+      regexp: "^{{ DROPLET_NAME }} *"
+      dest: "{{ HOST_FILE }}"
+      line: "{{ DROPLET_NAME }} ansible_user=root ansible_host={{ my_droplet.droplet.ip_address }}"
+      create: yes
+      backup: no
+
+  - debug: msg="ID is {{ my_droplet.droplet.id }}"
+
+  - debug: msg="IP is {{ my_droplet.droplet.ip_address }}"
