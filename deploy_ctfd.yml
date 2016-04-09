@@ -53,6 +53,7 @@
     git:
       repo: https://github.com/jeffcpullen/CTFd.git
       dest: /opt/CTFd
+      force: yes
 
 #  - name: Build CTFd docker image
 #    docker_image:
